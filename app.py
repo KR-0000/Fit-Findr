@@ -43,8 +43,45 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
            string and return it along with session["outfit_suggestion"] and
            session["fit_card"].
     """
-    # TODO: implement this function
-    return "Agent not yet implemented.", "", ""
+    if not user_query or not user_query.strip():
+        return "Please enter a search query.", "", ""
+
+    wardrobe = (
+        get_example_wardrobe()
+        if wardrobe_choice == "Example wardrobe"
+        else get_empty_wardrobe()
+    )
+
+    session = run_agent(user_query.strip(), wardrobe)
+
+    if session["error"]:
+        return session["error"], "", ""
+
+    item = session["selected_item"]
+    listing_lines = [
+        f"Title: {item['title']}",
+        f"Price: ${item['price']:.2f}",
+        f"Platform: {item['platform']}",
+        f"Size: {item['size']}",
+        f"Condition: {item['condition']}",
+        f"Colors: {', '.join(item.get('colors', []))}",
+        f"Tags: {', '.join(item.get('style_tags', []))}",
+    ]
+    if item.get("brand"):
+        listing_lines.append(f"Brand: {item['brand']}")
+    listing_lines.append(f"\n{item.get('description', '')}")
+
+    if session.get("retry_note"):
+        listing_lines.insert(0, f"[{session['retry_note']}]\n")
+
+    if session.get("price_assessment"):
+        pa = session["price_assessment"]
+        listing_lines.append(
+            f"\nPrice assessment: {pa['verdict'].upper()} — {pa['reasoning']}"
+        )
+
+    listing_text = "\n".join(listing_lines)
+    return listing_text, session["outfit_suggestion"] or "", session["fit_card"] or ""
 
 
 # ── interface ─────────────────────────────────────────────────────────────────
